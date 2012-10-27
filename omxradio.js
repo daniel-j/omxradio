@@ -1,3 +1,5 @@
+'use strict';
+
 process.stdout.write("Loading modules: http");var http = require('http');
 process.stdout.write(", url");var url  = require('url');
 process.stdout.write(", path");var path = require('path');
@@ -10,14 +12,47 @@ process.stdout.write(", youtube-feeds");var youtube = require('youtube-feeds');
 process.stdout.write(", child_process");var child_process = require('child_process');
 process.stdout.write(", DONE!\n");
 
-const PORT = 7000;
+var PORT = 7000;
 
 var nowPlaying = "";
+var requests  = [];
+var responses = [];
+var reqTimers = [];
+
+var sseReq  = [];
+var sseRes  = [];
+var sseId   = [];
+
+var sseData = {};
 
 omx.onstop = function () {
-	nowPlaying = "";
+	setNowPlaying("");
 	console.log("omxplayer stopped");
 };
+
+function setNowPlaying(np) {
+	if (nowPlaying !== np) {
+		nowPlaying = np;
+		sseData.nowPlaying = np;
+		updateNowPlaying();
+	}
+}
+function updateNowPlaying() {
+	
+	for (var i=0; i < requests.length; i++) {
+		responses[i].end(nowPlaying);
+		clearTimeout(reqTimers[i]);
+	}
+
+	for (var i=0; i < sseReq.length; i++) {
+		sseRes[i].write("id: "+sseId[i]+"\n");
+		sseRes[i].write("data: "+JSON.stringify(sseData)+"\n\n");
+	}
+
+	requests = [];
+	responses = [];
+	reqTimers = [];
+}
 
 var httpServer = http.createServer(function (req, res) {
 	
@@ -36,7 +71,7 @@ var httpServer = http.createServer(function (req, res) {
 				case 'start':
 					//console.log(uri.query.path);
 					omx.start(uri.query.path, function () {
-						nowPlaying = uri.query.title || uri.query.path;
+						setNowPlaying('<a href="'+uri.query.path+'" target="_blank">'+(uri.query.title || uri.query.path)+'</a>');
 						res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
 						res.end();
 					});
@@ -45,7 +80,7 @@ var httpServer = http.createServer(function (req, res) {
 				case 'stop':
 					console.log('stop');
 					omx.stop(function () {
-						nowPlaying = "";
+						setNowPlaying("");
 						res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
 						res.end();
 					});
@@ -99,14 +134,14 @@ var httpServer = http.createServer(function (req, res) {
 							yt.stdout.on('close', function () {
 								yt.kill();
 								omx.start(unescape(url).trim(), function () {
-									nowPlaying = title;
+									setNowPlaying('<a href="'+pageUrl+'" target="_blank">'+title+'</a>');
 									res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-									res.end(title);
+									res.end();
 								});
 							});
 						} else { // No result
 							res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-							res.end(nowPlaying);
+							res.end();
 						}
 
 					});
@@ -114,9 +149,54 @@ var httpServer = http.createServer(function (req, res) {
 			}
 			break;
 
+		case 'events':
+			res.writeHead(200, {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				'Connection': 'keep-alive'
+			});
+			var id = (new Date()).toLocaleTimeString();
+
+			sseReq.push(req);
+			sseRes.push(res);
+			sseId.push(id);
+
+			console.log('adding SSE client');
+
+			req.on('close', function () {
+				var index = sseReq.indexOf(req);
+				if (index !== -1) {
+					sseReq.splice(index, 1);
+					sseRes.splice(index, 1);
+					sseId.splice(index, 1);
+					console.log('removing SSE client');
+				}
+			});
+
+			break;
+
 		case 'nowplaying':
 			res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-			res.end(nowPlaying);
+			if (uri.query.init !== undefined || uri.query.current !== nowPlaying) {
+				res.end(nowPlaying);
+			} else {
+				requests.push(req);
+				responses.push(res);
+				reqTimers.push(setTimeout(function () {
+					res.end(nowPlaying);
+				}, 30*1000));
+
+				req.on('close', function () {
+					var index = requests.indexOf(req);
+					if (index !== -1) {
+						clearTimeout(reqTimers[index]);
+						requests.splice(index, 1);
+						responses.splice(index, 1);
+						reqTimers.splice(index, 1);
+
+					}
+				});
+			}
 			break;
 
 		default:

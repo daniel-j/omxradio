@@ -1,4 +1,19 @@
-var nowPlaying = document.getElementById('nowPlaying');
+'use strict';
+
+function xhr(uri, cb) {
+	var x = new XMLHttpRequest();
+	x.open('get', uri, true);
+	x.onload = function () {
+		cb(x.response);
+	};
+	x.onerror = function () {
+		cb(false);
+	};
+	x.send();
+}
+
+var nowPlaying = "";
+var nowPlayingOutput = document.getElementById('nowPlaying');
 
 var stations = document.getElementById('stations');
 var stopBtn  = document.getElementById('stopBtn');
@@ -17,12 +32,13 @@ bindButton(backwardBtn, '/omx/backward');
 bindButton(forwardBtn, '/omx/forward');
 bindButton(playPauseBtn, '/omx/playpause');
 
-function setActive(active) {
-	stations.disabled = !active;
-	stopBtn.disabled = !active;
-	customPath.disabled = !active;
-	youtubeSearch.disabled = !active;
+var isActive = true;
 
+function setActive(active) {
+	isActive = active;
+	stations.disabled = !active;
+
+	stopBtn.disabled = !active;
 	backwardBtn.disabled = !active;
 	forwardBtn.disabled = !active;
 	playPauseBtn.disabled = !active;
@@ -30,42 +46,49 @@ function setActive(active) {
 
 function bindButton(btn, url) {
 	btn.addEventListener('click', function () {
-		xhr(url, function () {
-			setActive(true);
-		});
+		if (isActive) {
+			xhr(url, function () {
+				setActive(true);
+			});
+		}
 	}, false);
 }
-function setNowPlaying(title) {
-	nowPlaying.textContent = title;
+function setNowPlaying(np) {
+	nowPlayingOutput.innerHTML = np;
+	nowPlaying = np;
+	//console.log("Now playing:", nowPlaying);
 }
 
 stopBtn.addEventListener('click', function () {
-	setActive(false);
-	xhr('/omx/stop', function () {
-		setActive(true);
-		setNowPlaying("");
-		stations.selectedIndex = 0;
-	});
+	if (isActive) {
+		setActive(false);
+		xhr('/omx/stop', function () {
+			setActive(true);
+			stations.selectedIndex = 0;
+		});
+	}
 }, false);
 
 stations.addEventListener('change', function (e) {
-	if (stations.selectedIndex > 0) {
+	if (stations.selectedIndex > 0 && isActive) {
+
+		var url = stations.value;
 		var title = stations.options[stations.selectedIndex].textContent;
+		stations.blur();
 		setActive(false);
-		xhr('/omx/start?path='+encodeURIComponent(stations.value)+"&title="+encodeURIComponent(title), function () {
-			setNowPlaying(title);
+		xhr('/omx/start?path='+encodeURIComponent(url)+"&title="+encodeURIComponent(title), function () {
 			setActive(true);
+			stations.focus();
 		});
 	}
 }, false);
 customUrlForm.addEventListener('submit', function (e) {
 	e.preventDefault();
 	var url = customPath.value;
-	if (url.length > 0) {
+	if (url.length > 0 && isActive) {
 		setActive(false);
 		xhr('/omx/start?path='+encodeURIComponent(url), function () {
 			stations.selectedIndex = 0;
-			setNowPlaying(url);
 			setActive(true);
 		});
 	}
@@ -73,31 +96,41 @@ customUrlForm.addEventListener('submit', function (e) {
 youtubeForm.addEventListener('submit', function (e) {
 	e.preventDefault();
 	var q = youtubeSearch.value;
-	if (q.length > 0) {
+	if (q.length > 0 && isActive) {
 		setActive(false);
-		xhr('/youtube/search?q='+encodeURIComponent(q), function (title) {
+		xhr('/youtube/search?q='+encodeURIComponent(q), function (html) {
 			stations.selectedIndex = 0;
-			setNowPlaying(title);
 			setActive(true);
 		});
 	}
 }, false);
 
 
-xhr('/nowplaying', setNowPlaying);
+function longPolling() {
+	var x = xhr('/nowplaying?current='+encodeURIComponent(nowPlaying), function (res) {
+		if (res !== false) {
+			setNowPlaying(res);
+			longPolling();
+		} else {
+			setTimeout(longPolling, 5000); // Error
+		}
+		
+	});
+}
 
-setInterval(function () {
-	xhr('/nowplaying', setNowPlaying);
-}, 5000);
+if (window.EventSource) {
+	var source = new EventSource('/events');
+	source.addEventListener('message', function (e) {
+		var data = JSON.parse(e.data);
+		if (data.nowPlaying !== undefined) {
+			setNowPlaying(data.nowPlaying)
+		}
+	}, false);
+} else {
+	xhr('/nowplaying?init', function (np) {
+		setNowPlaying(np);
+		longPolling();
+	});
+}
 
-function xhr(uri, cb) {
-	var x = new XMLHttpRequest();
-	x.open('get', uri, true);
-	x.onload = function () {
-		cb(x.response);
-	};
-	x.onerror = function () {
-		cb('');
-	};
-	x.send();
-};
+
