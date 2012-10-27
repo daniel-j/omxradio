@@ -1,6 +1,5 @@
-omxradio - A simple web interface for omxplayer.
+omxradio - A web interface for Raspberry Pi's omxplayer using node.js and youtube-dl.
 
-A web interface for Raspberry Pi's omxplayer using node.js and youtube-dl.
 
 To use this you must compile and install node.js and install youtube-dl.
 Tested on node v0.8.12.
@@ -10,8 +9,25 @@ Usage:
 
 Web interface shows up on http://hostname:7000/ where hostname is the name/ip address of the Raspberry Pi.
 
-Screenshot of the web interface (optimized for Google Chrome and/on Android ICS and up): http://i.imgur.com/esqcw.png
-Picture of Raspberry Pi "in action": http://i.imgur.com/nlu0b.jpg
+Features:
+  * Edit the html-page and put in your own radio stations
+  * Play a file stored locally or from an URL
+  * Play music (actually video if a monitor is connected) from Youtube.
+  * Search on Youtube by keywords, video id or video url.
+  * Queue tracks!
+  * Play/pause and stop current playing music.
+
+Supported (tested) browsers:
+  * Google Chrome 22
+  * Google Chrome for Android 18 (Jelly Bean)
+  * Google Chrome for iOS (ugly gui but usable)
+  * Safari for iOS (ugly gui but usable)
+  * Firefox 16
+
+Screenshot of the web interface (optimized for Google Chrome and/on Android ICS and up):
+http://i.imgur.com/Jbfhl.png
+Picture of Raspberry Pi "in action":
+http://i.imgur.com/nlu0b.jpg
 
 :P
 enjoy!
