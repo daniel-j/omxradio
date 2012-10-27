@@ -1,0 +1,12 @@
+omxradio - A simple web interface for omxplayer.
+
+A web interface for Raspberry Pi's omxplayer using node.js and youtube-dl.
+
+To use this you must compile and install node.js and install youtube-dl.
+Tested on node v0.8.12.
+
+Usage:
+  $ node omxradio
+
+Web interface shows up on http://hostname:7000/ where hostname is the name/ip address of the Raspberry Pi.
+

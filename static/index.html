@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=320">
+	<title>OMX radio</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<h1>Raspberry Pi - omx radio</h1>
+
+<marquee id="nowPlaying" scrollamount="5"></marquee>
+
+
+<select id="stations">
+	<option value="">Select station</option>
+	<option value="http://http-live.sr.se/p1-mp3-192">SR P1</option>
+	<option value="http://http-live.sr.se/p2-mp3-192">SR P2</option>
+	<option value="http://http-live.sr.se/p3-mp3-192">SR P3</option>
+	<option value="http://http-live.sr.se/p4blekinge-mp3-192">SR P4: Blekinge</option>
+	<option value="http://http-live.sr.se/p4malmo-mp3-192">SR P4: Malmöhus</option>
+	<option value="http://http-live.sr.se/p4sjuharad-mp3-192">SR P4: Sjuhärad</option>
+	<option value="http://stream-ice.mtgradio.com:8080/lugna_favoriter_mp3">Lugna Favoriter</option>
+</select>
+<br>
+
+<br>
+<form id="youtubeForm"><input type="text" id="youtubeSearch" placeholder="Play from YouTube" required></form>
+<br>
+<form id="customUrlForm"><input type="text" id="customPath" placeholder="Play from URL" required></form>
+<br>
+
+<button type="button" class="col3 left" id="backwardBtn">&lt;&lt;</button><button type="button" class="col3 center" id="playPauseBtn">Play/pause</button><button type="button" class="col3 right" id="forwardBtn">&gt;&gt;</button>
+<br style="clear: both">
+<button type="button" id="stopBtn">Stop playing</button>
+
+<br>
+<hr>
+Created by <a href="http://djazz.mine.nu/">djazz</a> - Download <a href="https://github.com/daniel-j/omxradio">source</a>
+<br>
+
+<script src="main.js"></script>
+
+</body>
+</html>

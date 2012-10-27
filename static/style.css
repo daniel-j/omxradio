@@ -1,0 +1,48 @@
+body {
+	margin: 5px;
+	width: 310px;
+}
+
+h1 {
+	font-size: 24px;
+	margin-bottom: 8px;
+}
+
+#nowPlaying {
+	font-style: italic;
+	color: #666;
+}
+
+select {
+	width: 310px;
+	height: 70px;
+	font-size: 24px;
+	text-align: center;
+	display: block;
+}
+button {
+	width: 310px;
+	height: 60px;
+	font-size: 16px;
+}
+.col3 {
+	width: 102px;
+}
+.left {
+	float: left;
+}
+.col3.center {
+	width: 106px;
+}
+
+.right {
+	float: right;
+}
+input[type="text"] {
+	width: 300px;
+	font-size: 20px;
+	height: 60px;
+	border: none;
+	padding: 5px;
+	box-shadow: inset 0px 0px 5px #CCC;
+}
