@@ -10,8 +10,6 @@
 
 <h1>Raspberry Pi - omxradio</h1>
 
-<marquee id="nowPlaying" scrollamount="3"></marquee>
-
 
 <select id="stations">
 	<option value="">Select station</option>
@@ -25,12 +23,16 @@
 </select>
 <br>
 
-<form id="youtubeForm"><input type="text" id="youtubeSearch" placeholder="Play from YouTube" required class="left"><button class="right small">&gt;</button></form>
+<form id="searchForm"><input type="text" id="searchInput" placeholder="Seach Youtube/direct URL" required><button type="button" class="col2 left small" id="queueBtn">Queue</button><button class="col2 right small" id="playBtn">Play</button></form>
 <br style="clear: both">
 <br>
 
-<form id="customUrlForm"><input type="text" id="customPath" placeholder="Play from URL" required class="left"><button class="right small">&gt;</button></form>
+
+<h2 class="left" style="margin: 5px;">Queue</h2>
+<button type="button" class="right small" id="playQueueBtn" style="width: auto; margin-bottom: 3px;">Start queue/next song</button>
 <br style="clear: both">
+<div id="queueDiv"></div>
+
 <br>
 
 <button type="button" class="col3 left" id="backwardBtn">&lt;&lt;</button><button type="button" class="col3 center" id="playPauseBtn">Toggle playback</button><button type="button" class="col3 right" id="forwardBtn">&gt;&gt;</button>
@@ -38,10 +40,13 @@
 <button type="button" id="stopBtn">Stop playback</button>
 
 
+
 <br>
 <hr>
-Created by <a href="http://djazz.mine.nu/">djazz</a> - Download <a href="https://github.com/daniel-j/omxradio">source</a>
+Created by <a href="http://djazz.mine.nu/">djazz</a> - Download <a href="https://github.com/daniel-j/omxradio">source here</a>.
 <br><br><br>
+
+<marquee id="nowPlaying" scrollamount="3"></marquee>
 
 <script src="main.js"></script>
 

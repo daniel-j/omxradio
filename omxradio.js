@@ -15,43 +15,163 @@ process.stdout.write(", DONE!\n");
 var PORT = 7000;
 
 var nowPlaying = "";
-var requests  = [];
-var responses = [];
-var reqTimers = [];
 
 var sseReq  = [];
 var sseRes  = [];
 var sseId   = [];
 
-var sseData = {};
+var queue = [];
+var queueChanged = false;
+var nowPlayingChanged = false;
 
-omx.onstop = function () {
-	setNowPlaying("");
-	console.log("omxplayer stopped");
+// For XHR requests
+var eventsData = {
+	nowPlaying: nowPlaying,
+	queue: {
+		list: queue
+	}
 };
+
+var queueItemCounter = 0;
+var isChangingSong = false;
+
+omx.onstop = function (wasKilled, stdout) {
+	if (!wasKilled && !isChangingSong) {
+		console.log("omxplayer stopped playback by itself");
+
+		playFromQueue();
+		if (queue.length === 0) {
+			setNowPlaying("");
+		}
+	} else {
+		setNowPlaying("");
+	}
+};
+
+function QueueItem(params) {
+	this.url = params.url;
+	this.site = params.site || params.url;
+	this.title = params.title || this.site;
+	this.id = params.id || queueItemCounter++;
+	this.yt = !!params.yt;
+	this.html = this.toHTML();
+}
+QueueItem.prototype.toHTML = function () {
+	return '<a href="'+this.site+'" target="_blank">'+this.title+'</a>';
+}
+
+function playFromQueue(cb) {
+	if (queue.length > 0) {
+		var item = removeFromQueue(0);
+		isChangingSong = true;
+		/*if (item.yt) {
+			console.log('getting youtube link..');
+			getYoutubeUrl(item.site, function (realUrl) {
+				console.log('playing '+item.title);
+				omx.stop(function () {
+					omx.start(realUrl, function () {
+						
+						setNowPlaying(item.toHTML());
+						if (cb) cb();
+						isChangingSong = false;
+						
+					});
+				});
+			});
+		} else {*/
+			
+			omx.start(item.url, function () {
+				setNowPlaying(item.toHTML());
+				if (cb) cb();
+				isChangingSong = false;
+			});
+		//}
+
+	} else {
+		if (cb) cb();
+	}
+}
+
+function addToQueue(params) {
+	
+
+	function cb() {
+		var item = new QueueItem(params);
+		console.log("Added "+item.title+" to the queue.");
+		queue.push(item);
+		var data = JSON.stringify({
+			queue: {
+				add: item
+			}
+		});
+		for (var i=0; i < sseReq.length; i++) {
+			sendToSSE(i, data);
+		}
+	}
+
+	if (params.yt) {
+		getYoutubeUrl(params.site, function (realUrl) {
+			
+			params.url = realUrl;
+			cb();
+		});
+	} else {
+		cb();
+	}
+}
+function removeFromQueue(pos) {
+	var item = queue.splice(pos, 1)[0];
+
+	console.log("Removed "+item.id+" "+item.title+" from the queue.");
+
+	var data = {
+		queue: {
+			remove: item.id
+		}
+	}
+	data = JSON.stringify(data);
+	for (var i=0; i < sseReq.length; i++) {
+		sendToSSE(i, data);
+	}
+
+	return item;
+}
 
 function setNowPlaying(np) {
 	if (nowPlaying !== np) {
 		nowPlaying = np;
-		sseData.nowPlaying = np;
-		updateNowPlaying();
+		eventsData.nowPlaying = np;
+		nowPlayingChanged = true;
+		
+		var data = {
+			nowPlaying: nowPlaying
+		};
+
+		data = JSON.stringify(data);
+		for (var i=0; i < sseReq.length; i++) {
+			sendToSSE(i, data);
+		}
 	}
 }
-function updateNowPlaying() {
-	
-	for (var i=0; i < requests.length; i++) {
-		responses[i].end(nowPlaying);
-		clearTimeout(reqTimers[i]);
-	}
 
-	for (var i=0; i < sseReq.length; i++) {
-		sseRes[i].write("id: "+sseId[i]+"\n");
-		sseRes[i].write("data: "+JSON.stringify(sseData)+"\n\n");
-	}
+function sendToSSE(i, data) {
+	sseRes[i].write("id: "+sseId[i]+"\n");
+	sseRes[i].write("data: "+data+"\n\n");
+}
 
-	requests = [];
-	responses = [];
-	reqTimers = [];
+function getYoutubeUrl(pageUrl, cb) {
+	var yt = child_process.spawn("youtube-dl", ["--format", "38/37/46/22/35/34/18/6/5/17/13", "-g", pageUrl]); // Pick highest available quality
+	var url = "";
+	yt.stdout.on('data', function (data) {
+		url += data.toString('utf8');
+	});
+	yt.stdout.on('close', function () {
+		yt.kill();
+		var realUrl = unescape(url).trim();
+		
+		cb(realUrl);
+		
+	});
 }
 
 var httpServer = http.createServer(function (req, res) {
@@ -109,93 +229,118 @@ var httpServer = http.createServer(function (req, res) {
 					notFound(res);
 				break;
 			}
-
-			
-
 			break;
 
-		case 'youtube':
+		case 'queue':
 			switch (pathlist[1]) {
-				case 'search':
-					console.log("Youtube search:", uri.query.q);
-					youtube.feeds.videos( {q: uri.query.q}, function (result) {
-						if (result.items && result.items[0]) {
-							var video = result.items[0];
-
-							var title = video.title;
-							var pageUrl = video.player.default;
-							console.log("Playing:", title);
-
-							var yt = child_process.spawn("youtube-dl", ["--format", "38/37/46/22/35/34/18/6/5/17/13", "-g", pageUrl]);
-							var url = "";
-							yt.stdout.on('data', function (data) {
-								url += data.toString('utf8');
-							});
-							yt.stdout.on('close', function () {
-								yt.kill();
-								omx.start(unescape(url).trim(), function () {
-									setNowPlaying('<a href="'+pageUrl+'" target="_blank">'+title+'</a>');
-									res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-									res.end();
-								});
-							});
-						} else { // No result
-							res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-							res.end();
-						}
-
+				case 'start':
+					playFromQueue(function () {
+						res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+						res.end();
 					});
+					break;
+				case 'remove':
+					var id = parseInt(uri.query.id, 10);
+					for (var i = 0; i < queue.length; i++) {
+						if (queue[i].id === id) {
+							removeFromQueue(i);
+						}
+					}
+					res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+					res.end();
 					break;
 			}
 			break;
 
-		case 'events':
-			res.writeHead(200, {
-				'Content-Type': 'text/event-stream',
-				'Cache-Control': 'no-cache',
-				'Connection': 'keep-alive'
-			});
-			var id = (new Date()).toLocaleTimeString();
+		
+		case 'search':
+			console.log("Youtube search:", uri.query.q);
+			var isQueue = uri.query.queue !== undefined;
+			if (!isQueue) {
+				isChangingSong = true;
+			}
+			youtube.feeds.videos( {q: uri.query.q}, function (result) {
+				if (result.items && result.items[0]) {
+					var video = result.items[0];
 
-			sseReq.push(req);
-			sseRes.push(res);
-			sseId.push(id);
+					var title = video.title;
+					var pageUrl = video.player.default;
+					console.log("Found:", title);
 
-			console.log('adding SSE client');
-
-			req.on('close', function () {
-				var index = sseReq.indexOf(req);
-				if (index !== -1) {
-					sseReq.splice(index, 1);
-					sseRes.splice(index, 1);
-					sseId.splice(index, 1);
-					console.log('removing SSE client');
+					if (isQueue) {
+						addToQueue({site: pageUrl, title: title, yt: true});
+						res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+						res.end();
+					} else {
+						getYoutubeUrl(pageUrl, function (realUrl) {
+							omx.start(realUrl, function () {
+								setNowPlaying('<a href="'+pageUrl+'" target="_blank">'+title+'</a>');
+								res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+								res.end();
+								isChangingSong = false;
+							});
+						});
+						
+					}
+				} else { // No result
+					if (isQueue) {
+						addToQueue({url: uri.query.q});
+						res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+						res.end();
+					} else {
+						omx.start(uri.query.q, function () {
+							setNowPlaying('<a href="'+uri.query.q+'" target="_blank">'+uri.query.q+'</a>');
+							res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+							res.end();
+							isChangingSong = false;
+						});
+					}
+					
 				}
-			});
 
+			});
 			break;
 
-		case 'nowplaying':
-			res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
-			if (uri.query.init !== undefined || uri.query.current !== nowPlaying) {
-				res.end(nowPlaying);
-			} else {
-				requests.push(req);
-				responses.push(res);
-				reqTimers.push(setTimeout(function () {
-					res.end(nowPlaying);
-				}, 30*1000));
+		case 'events':
+
+			if (req.headers.accept && req.headers.accept == 'text/event-stream') {
+				res.writeHead(200, {
+					'Content-Type': 'text/event-stream',
+					'Cache-Control': 'no-cache',
+					'Connection': 'keep-alive'
+				});
+				var id = (new Date()).toLocaleTimeString();
+
+				sseReq.push(req);
+				sseRes.push(res);
+				sseId.push(id);
+
+				sendToSSE(sseReq.length-1, JSON.stringify(eventsData));
+
+				var sseTimer = setInterval(function () {
+					var index = sseReq.indexOf(req);
+					if (index !== -1) {
+						sendToSSE(index, JSON.stringify({}));
+					} else {
+						clearInterval(sseTimer);
+					}
+				}, 15*1000);
+
+				console.log('adding SSE client');
 
 				req.on('close', function () {
-					var index = requests.indexOf(req);
+					var index = sseReq.indexOf(req);
 					if (index !== -1) {
-						clearTimeout(reqTimers[index]);
-						requests.splice(index, 1);
-						responses.splice(index, 1);
-						reqTimers.splice(index, 1);
-
+						sseReq.splice(index, 1);
+						sseRes.splice(index, 1);
+						sseId.splice(index, 1);
+						clearInterval(sseTimer);
+						console.log('removing SSE client');
 					}
 				});
+			} else {
+				res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+				res.end(JSON.stringify(eventsData));
 			}
 			break;
 
