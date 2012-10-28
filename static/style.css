@@ -60,17 +60,22 @@ input[type="text"] {
 	box-shadow: inset 0px 0px 5px #CCC;
 }
 
-#queueDiv .queueItem {
-	overflow: auto;
-	margin-top: 3px;
+#queueDiv .queueItem td {
 	font-size: 14px;
-	padding-bottom: 2px;
-	border-bottom: 1px solid #DDD;
+	padding: 3px 3px;
+}
+#queueDiv .queueItem {
+	background-color: #DDD;
+}
+#queueDiv .queueItem:nth-child(2n) {
+	background-color: #EEE;
 }
 
-#queueDiv button.removeBtn {
-	float: right;
+#queueDiv button.queueItemBtn {
 	width: 30px;
 	height: 30px;
 	padding: 0px;
+}
+#queueDiv tr:first-child button.queueMoveButton {
+	visibility: hidden;
 }

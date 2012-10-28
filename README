@@ -6,7 +6,7 @@ To use this you must compile and install node.js and install youtube-dl with apt
 Usage:
   $ node omxradio
 
-Web interface shows up on http://hostname:7000/ where hostname is the name/ip address of the Raspberry Pi.
+Web interface shows up on http://hostname:7000/ where hostname is the name/ip address of the Raspberry Pi. It is optimized for Google Chrome and/on Android ICS/JB.
 
 Features:
   * Edit the html-page and put in your own radio stations
@@ -23,8 +23,8 @@ Supported (tested) browsers:
   * Safari for iOS (ugly gui but usable)
   * Firefox 16
 
-Screenshot of the web interface (optimized for Google Chrome and/on Android ICS and up):
-http://i.imgur.com/Jbfhl.png
+Screenshot of the web interface:
+http://i.imgur.com/VObbK.png
 Picture of Raspberry Pi "in action":
 http://i.imgur.com/nlu0b.jpg
 

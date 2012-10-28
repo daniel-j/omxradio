@@ -10,20 +10,28 @@
 
 <h1>Raspberry Pi - omxradio</h1>
 
-
-<select id="stations">
-	<option value="">Select station</option>
-	<option value="http://http-live.sr.se/p1-mp3-192">SR P1</option>
-	<option value="http://http-live.sr.se/p2-mp3-192">SR P2</option>
-	<option value="http://http-live.sr.se/p3-mp3-192">SR P3</option>
-	<option value="http://http-live.sr.se/p4blekinge-mp3-192">SR P4: Blekinge</option>
-	<option value="http://http-live.sr.se/p4malmo-mp3-192">SR P4: Malmöhus</option>
-	<option value="http://http-live.sr.se/p4sjuharad-mp3-192">SR P4: Sjuhärad</option>
-	<option value="http://stream-ice.mtgradio.com:8080/lugna_favoriter_mp3">Lugna Favoriter</option>
-</select>
+<form id="stationsForm">
+	<select id="stations">
+		<option value="">Select station</option>
+		<option value="http://http-live.sr.se/p1-mp3-192">SR P1</option>
+		<option value="http://http-live.sr.se/p2-mp3-192">SR P2</option>
+		<option value="http://http-live.sr.se/p3-mp3-192">SR P3</option>
+		<option value="http://http-live.sr.se/p4blekinge-mp3-192">SR P4: Blekinge</option>
+		<option value="http://http-live.sr.se/p4malmo-mp3-192">SR P4: Malmöhus</option>
+		<option value="http://http-live.sr.se/p4sjuharad-mp3-192">SR P4: Sjuhärad</option>
+		<option value="http://stream-ice.mtgradio.com:8080/lugna_favoriter_mp3">Lugna Favoriter</option>
+	</select>
+	<button type="button" class="col2 left small" id="queueStationBtn">Queue</button>
+	<button class="col2 right small" id="playStationBtn">Play</button>
+</form>
+<br style="clear: both">
 <br>
 
-<form id="searchForm"><input type="text" id="searchInput" placeholder="Seach Youtube/direct URL" required><button type="button" class="col2 left small" id="queueBtn">Queue</button><button class="col2 right small" id="playBtn">Play</button></form>
+<form id="searchForm">
+	<input type="text" id="searchInput" placeholder="Seach Youtube/direct URL" required>
+	<button type="button" class="col2 left small" id="queueBtn">Queue</button>
+	<button class="col2 right small" id="playBtn">Play</button>
+</form>
 <br style="clear: both">
 <br>
 

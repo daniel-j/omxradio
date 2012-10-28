@@ -64,7 +64,7 @@ function playFromQueue(cb) {
 	if (queue.length > 0) {
 		var item = removeFromQueue(0);
 		isChangingSong = true;
-		/*if (item.yt) {
+		if (item.yt) {
 			console.log('getting youtube link..');
 			getYoutubeUrl(item.site, function (realUrl) {
 				console.log('playing '+item.title);
@@ -78,14 +78,14 @@ function playFromQueue(cb) {
 					});
 				});
 			});
-		} else {*/
-			
+		} else {
+			console.log('playing '+item.title);
 			omx.start(item.url, function () {
 				setNowPlaying(item.toHTML());
 				if (cb) cb();
 				isChangingSong = false;
 			});
-		//}
+		}
 
 	} else {
 		if (cb) cb();
@@ -95,29 +95,21 @@ function playFromQueue(cb) {
 function addToQueue(params) {
 	
 
-	function cb() {
-		var item = new QueueItem(params);
-		console.log("Added "+item.title+" to the queue.");
-		queue.push(item);
-		var data = JSON.stringify({
-			queue: {
-				add: item
-			}
-		});
-		for (var i=0; i < sseReq.length; i++) {
-			sendToSSE(i, data);
+	
+	var item = new QueueItem(params);
+	console.log("Added "+item.title+" to the queue.");
+	queue.push(item);
+	var data = JSON.stringify({
+		queue: {
+			add: item
 		}
+	});
+	for (var i=0; i < sseReq.length; i++) {
+		sendToSSE(i, data);
 	}
+	
 
-	if (params.yt) {
-		getYoutubeUrl(params.site, function (realUrl) {
-			
-			params.url = realUrl;
-			cb();
-		});
-	} else {
-		cb();
-	}
+	
 }
 function removeFromQueue(pos) {
 	var item = queue.splice(pos, 1)[0];
@@ -135,6 +127,27 @@ function removeFromQueue(pos) {
 	}
 
 	return item;
+}
+
+function moveUpInQueue(pos) {
+	if (pos > 0) {
+		var item = queue[pos];
+		console.log("Move up "+item.id+" "+item.title+" ("+pos+") in the queue.");
+		var id = item.id;
+
+		queue[pos] = queue[pos-1];
+		queue[pos-1] = item;
+
+		var data = JSON.stringify({
+			queue: {
+				moveup: id
+			}
+		});
+		for (var i=0; i < sseReq.length; i++) {
+			sendToSSE(i, data);
+		}
+
+	}
 }
 
 function setNowPlaying(np) {
@@ -160,7 +173,7 @@ function sendToSSE(i, data) {
 }
 
 function getYoutubeUrl(pageUrl, cb) {
-	var yt = child_process.spawn("youtube-dl", ["--format", "38/37/46/22/35/34/18/6/5/17/13", "-g", pageUrl]); // Pick highest available quality
+	var yt = child_process.spawn("youtube-dl", ["-f", "38/37/46/22/35/34/18/6/5/17/13", "-g", pageUrl]); // Pick highest available quality
 	var url = "";
 	yt.stdout.on('data', function (data) {
 		url += data.toString('utf8');
@@ -239,6 +252,13 @@ var httpServer = http.createServer(function (req, res) {
 						res.end();
 					});
 					break;
+
+				case 'add':
+					addToQueue(uri.query);
+					res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+					res.end();
+					break;
+
 				case 'remove':
 					var id = parseInt(uri.query.id, 10);
 					for (var i = 0; i < queue.length; i++) {
@@ -248,6 +268,21 @@ var httpServer = http.createServer(function (req, res) {
 					}
 					res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
 					res.end();
+					break;
+
+				case 'moveup':
+					var id = parseInt(uri.query.id, 10);
+					
+					for (var i = 1; i < queue.length; i++) {
+						if (queue[i].id === id) {
+
+							moveUpInQueue(i);
+							break;
+						}
+					}
+					res.writeHead(200, {'Content-Type': 'text/plain;charset=utf-8'});
+					res.end();
+
 					break;
 			}
 			break;
